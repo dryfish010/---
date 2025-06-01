@@ -64,8 +64,11 @@ flask
 3.	SelectGA:使用競賽選擇
 常見的父代選擇方法包括競賽選擇與輪盤選擇。在本次實作中發現，輪盤選擇法因為對適應度差異較小的個體辨識度不高，容易選到表現較差的個體，導致解的品質不穩定，且收斂曲線波動較大。此外，輪盤選擇通常需要更多的世代數來逼近全域最優解，因此在本題中不適用。相較之下，競賽選擇法具備較高的選擇壓力，能更穩定地選出表現較佳的個體，有助於加快收斂速度與提升整體解的品質，因此本次採用競賽選擇法作為父代選擇策略。 
  
-輪盤選擇法	競賽選擇法
-  
+輪盤選擇法	          競賽選擇法
+
+  ![image](https://github.com/user-attachments/assets/a8c88c99-48fa-41c2-a20a-91aa184dacd3)![image](https://github.com/user-attachments/assets/9aad4eac-ccd6-4b34-95c2-29618a6f0e85)
+
+
 	 
 4.	Crossover 交配
 順序型基因的交配策略，透過隨機選取父代中一段基因（通常是連續的一段子序列），將其直接複製到子代的對應位置。接著，從另一個父代中，依照其基因出現的順序，跳過已經複製的基因，將剩餘的基因依序填入子代中尚未指定的位置。這樣的設計確保了子代中的基因不會重複，且保留了父代的部分結構與順序。
@@ -83,11 +86,18 @@ flask
 為了避免基因演算法在演化過程中陷入局部最優解而喪失多樣性，突變機制被引入以隨機打亂基因序列。其中，常見的突變方法包括 倒置（Inversion）、交換（Swap） 以及 打亂（Scramble）。最初本專案使用的是交換法進行突變處理，但在實驗比較三種方法後發現，Scramble mutation 在多次測試中能以較少的迭代次數收斂至最佳解，因此最終採用 Scramble 作為本演算法的突變策略。 
  
 swap
+
+![image](https://github.com/user-attachments/assets/4707c233-03c8-4534-acf0-cc072adf3764)
+
  
 Inversion
- 
+
+ ![image](https://github.com/user-attachments/assets/8b76be3e-9eeb-458a-b942-9130b0e1bba1)
+
 Scramble
- 
+
+ ![image](https://github.com/user-attachments/assets/c4c77a56-8743-4184-97a9-1e7040ba6138)
+
 
 6.	NextGA產生子代: 
 在每一代中，演算法會隨機挑選兩個父代個體，透過交配（crossover 函數）產生出一個子代。接著，根據預設的突變率判斷是否對該子代進行突變操作(mutation 函數)。最後，產生出的子代將被加入到新一代的族群中，作為後續演化的基礎。
@@ -106,13 +116,9 @@ Scramble
 
 	
 四、	壓力測試
-變異率為0.8	變異率為0.5
- 	 
-變異率為0.125	變異率為0.001
- 	 
-	Popsize=100	Popsize =1000
- 	 
-Popsize=50 	Popsieze=80
+
+![image](https://github.com/user-attachments/assets/a1cc212a-6abd-4d84-9ca8-bada7e0b98db)
+
  	 
 
 
