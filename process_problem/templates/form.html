@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+
+<head>
+    <link rel="stylesheet" href="static/styles.css">
+    <meta charset="UTF-8">
+    <title>機器與工作設定</title>
+    <style>
+        body { font-family: Arial; padding: 20px; }
+        .section { margin-bottom: 30px; }
+        label { display: block; margin: 5px 0 2px; }
+        input, select, button { margin-bottom: 10px; }
+        select[multiple] { height: 100px; width: 200px; }
+        .output { background: #f0f0f0; padding: 10px; border-radius: 5px; }
+        #result-section { display: none; margin-top: 30px; }
+    </style>
+</head>
+
+<body>
+
+    <h1>機器與工作設定介面</h1>
+    <div class="section" id="machines-section">
+        <h2>機器設定</h2>
+        <div id="machine-list"></div>
+        <button onclick="addMachine()">新增機器</button>
+    </div>
+
+    <div class="section" id="jobs-section">
+        <h2>工作設定</h2>
+        <label for="job-count">輸入工作數量：</label>
+        <input type="number" id="job-count" min="1" />
+        <button onclick="generateJobs()">產生工作輸入欄位</button>
+        <div id="job-inputs"></div>
+    </div>
+
+    <div class="section">
+        <button onclick="submitData()">送出設定</button>
+        <h3>輸出結果</h3>
+        <pre class="output" id="output"></pre>
+    </div>
+
+    <div id="result-section" style="display: none;">
+    <h3>最佳排程結果</h3>
+    <p id="total-time"></p>
+    <h4>每個工作的處理步驟：</h4>
+    <div id="job-steps-container"></div>
+    <h4>甘特圖視覺化</h4>
+    <img id="gantt-chart" style="max-width: 100%; border: 1px solid #ccc;" />
+    <p><strong>最佳步數：</strong><span id="best-steps"></span></p>
+    <p><strong>花費時間：</strong><span id="runtime"></span> 秒</p>
+    <p><strong>第 <span id="min-gen"></span> 代達到最小值</strong></p>
+
+    
+    
+    <h4>收斂圖（Fitness 圖表）</h4>
+    <img id="fitness-plot" style="max-width: 100%; border: 1px solid #ccc;" />
+
+
+</div>
+    <script>
+        document.addEventListener("DOMContentLoaded", function (){
+              // 確保函數可用
+                window.addMachine = addMachine;
+                window.generateJobs = generateJobs;
+                window.generateMachineSteps = generateMachineSteps;
+                window.submitData = submitData;
+            });
+            function addMachine() {
+                const container = document.getElementById('machine-list');
+                const div = document.createElement('div');
+                div.innerHTML = `
+                    <label>機器名稱：<input type="text" name="machine-name" required></label>
+                    <label>處理時間（小時）：<input type="number" name="machine-time" required></label>
+                    <label>最大容量：<input type="number" name="machine-capacity" required></label>
+                `;
+                container.appendChild(div);
+            }
+
+            function generateJobs() {
+                const jobCount = parseInt(document.getElementById('job-count').value);
+                
+                if (isNaN(jobCount) || jobCount < 2) {  
+                    alert("請輸入至少兩個工作");
+                    return;
+                }
+
+                const container = document.getElementById('job-inputs');
+                container.innerHTML = '';
+
+                const machines = Array.from(document.querySelectorAll('[name="machine-name"]'))
+                    .map(input => input.value.trim())
+                    .filter(name => name !== '');
+
+                if (machines.length === 0) {
+                    alert("請先輸入至少一台機器名稱");
+                    return;
+                }
+
+                for (let i = 0; i < jobCount; i++) {
+                    const jobDiv = document.createElement('div');
+                    jobDiv.classList.add('job-input');
+                    jobDiv.innerHTML = `<h3>工作 ${i + 1}</h3>
+                        <label>可處理天數：<input type="number" name="job-days-${i}" required></label>
+                        <label>加工所需機器數量：
+                            <input type="number" name="job-machine-steps-${i}" min="2" max="${machines.length}" 
+                                onchange="generateMachineSteps(${i}, this.value)">
+                        </label>
+                        <div id="job-machine-steps-${i}"></div>`;
+                    container.appendChild(jobDiv);
+                }
+            }
+
+            function generateMachineSteps(jobIndex, stepCount) {
+                const container = document.getElementById(`job-machine-steps-${jobIndex}`);
+                container.innerHTML = '';
+
+                const machines = Array.from(document.querySelectorAll('[name="machine-name"]'))
+                    .map(input => input.value.trim())
+                    .filter(name => name !== '');
+
+                for (let step = 0; step < stepCount; step++) {
+                    const label = document.createElement('label');
+                    label.textContent = ` 所需機器${step + 1}：`;
+
+                    const select = document.createElement('select');
+                    select.name = `job-${jobIndex}-step-${step}`;
+
+                    machines.forEach(machine => {
+                        const option = document.createElement('option');
+                        option.value = machine;
+                        option.textContent = machine;
+                        select.appendChild(option);
+                    });
+
+                    container.appendChild(label);
+                    container.appendChild(select);
+                }
+            }
+
+            function submitData() { 
+                const machineNames = Array.from(document.querySelectorAll('[name="machine-name"]')).map(e => e.value.trim());
+                const machineTimes = Array.from(document.querySelectorAll('[name="machine-time"]')).map(e => parseInt(e.value));
+                const machineCapacities = Array.from(document.querySelectorAll('[name="machine-capacity"]')).map(e => parseInt(e.value));
+
+                // 機器時間字典
+                const machine_times = {};               
+                const machine_capacity = {};  // 新增機器容量
+
+                machineNames.forEach((name, index) => {
+                    machine_times[name] = machineTimes[index];
+                    machine_capacity[name] = machineCapacities[index];  // 儲存機器最大承受量
+                });
+                
+                console.log("機器時間",machine_times)
+                console.log("機器容量",machine_capacity)
+                const jobDivs = document.querySelectorAll('.job-input');
+                const jobs = {};
+
+                jobDivs.forEach((div, index) => {
+                    const days = parseInt(div.querySelector(`[name="job-days-${index}"]`).value);
+                    const stepCountInput = div.querySelector(`[name="job-machine-steps-${index}"]`);
+                    const stepCount = stepCountInput ? parseInt(stepCountInput.value) : 0;
+
+                    const steps = [];
+                    for (let i = 0; i < stepCount; i++) {
+                        const selected = div.querySelector(`[name="job-${index}-step-${i}"]`);
+                        if (selected) {
+                            steps.push(selected.value);
+                        }
+                    }
+
+                    jobs[index + 1] = { machines: steps, days };
+                });
+
+            fetch('/run_ga', { 
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ jobs, machine_times ,machine_capacity}) 
+            })
+            .then(res => res.json())
+            .then(data => {
+                console.log("收到後端的數據:", data);
+                document.getElementById("best-steps").innerText = "最佳步數：" + data.best_steps;
+                document.getElementById("runtime").innerText = "花費時間：" + data.runtime + " 秒";
+                document.getElementById("min-gen").innerText = "第 " + data.min_gens + " 代達到最小值";
+                document.getElementById("gantt-chart").src = "data:image/png;base64," + data.gantt_chart;
+                document.getElementById("fitness-plot").src = "data:image/png;base64," + data.plot;
+                
+
+                
+                const jobStepsContainer = document.getElementById("job-steps-container");
+                jobStepsContainer.innerHTML = ""; // 清空現有內容
+                total_time=0;
+                for (const jobId in data.job_steps) {
+                    const jobData = data.job_steps[jobId];
+                    const jobDuration=data.job_durations[jobId];
+                    const jobEnd=data.end_time
+
+                    const jobDiv = document.createElement("div");
+                    jobDiv.innerHTML = `<h4>工作 ${jobId}（總處理時間: ${jobDuration} 小時）</h4>`;
+                    total_time=total_time+ jobDuration;
+                    const stepList = document.createElement("ul");
+                    
+                    jobData.step_sequence.forEach(step => {
+                        const stepItem = document.createElement("li");
+                        stepItem.innerHTML = `步驟 ${step.step}: 機器 <strong>${step.machine}</strong>（處理時間: ${step.processing_time} 小時)`;
+                        stepList.appendChild(stepItem);
+                    });
+
+                    jobDiv.appendChild(stepList);
+                    jobStepsContainer.appendChild(jobDiv);
+                }
+                document.getElementById("total-time").innerText = "總排程時間：" + total_time + " 小時";
+                document.getElementById("result-section").style.display = "block";
+            })
+            .catch(error => console.error("發生錯誤:", error));
+        }
+    </script>
+
+</body>
+</html>
