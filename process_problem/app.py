@@ -44,7 +44,7 @@ def process_jobs():
 
 
 def extract_all_machines(jobs):
-    """ 從所有工作提取機器名稱清單 """
+    #從所有工作提取機器名稱清單 
     machine_set = set()
     for steps in jobs.values():
         machine_set.update(steps)

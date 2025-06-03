@@ -180,8 +180,8 @@
             .then(res => res.json())
             .then(data => {
                 console.log("收到後端的數據:", data);
-                document.getElementById("best-steps").innerText = "最佳步數：" + data.best_steps;
-                document.getElementById("runtime").innerText = "花費時間：" + data.runtime + " 秒";
+                document.getElementById("best-steps").innerText = data.best_steps;
+                document.getElementById("runtime").innerText =  data.runtime + " 秒";
                 document.getElementById("min-gen").innerText = "第 " + data.min_gens + " 代達到最小值";
                 document.getElementById("gantt-chart").src = "data:image/png;base64," + data.gantt_chart;
                 document.getElementById("fitness-plot").src = "data:image/png;base64," + data.plot;
