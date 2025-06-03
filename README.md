@@ -219,3 +219,4 @@ def generate_gantt_chart(job_steps, machine_capacity,sorted_job_ids):
 1. 用戶可輸入開始時間及結束時間
 2. 新增瓶頸標示
 3. 延遲任務標示
+4. 資料庫及使用者登入
