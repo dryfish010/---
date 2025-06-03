@@ -80,12 +80,12 @@ def efficiency(schedule, jobs, job_deadlines, machine_times, machine_capacity):
 
         # 超過可處理天數則加懲罰
         late_days = max(0, completion_time / 24 - job_deadlines[job_id])
-        total_late_penalty += late_days * 10  # 懲罰權重可調整
+        total_late_penalty += late_days * 10 
 
     # 檢查機器是否過載
     for machine, usage in machine_usage.items():
         if usage > machine_capacity[machine]:  # 超過可處理數量
-            machine_overload_penalty += (usage - machine_capacity[machine]) * 5  # 懲罰可調整
+            machine_overload_penalty += (usage - machine_capacity[machine]) * 5  
 
     # 目標：平衡步數、處理時間、遲交懲罰、機器負載
     return 1 / (1 + total_steps + total_time / 10 + total_late_penalty + machine_overload_penalty)
