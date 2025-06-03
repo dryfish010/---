@@ -136,7 +136,7 @@ def nextGA(parents, pop_size, jobs, MUTATION_RATE):
 def GA(jobs, job_deadlines, POP_SIZE, GENS, MUTATION_RATE, machine_list, machine_times, machine_capacity):
     population = initialPop(machine_list, POP_SIZE)
     best_score, best_solution, total_history = float('-inf'), None, []
-    best_step_sequence = {}  # ✅ 儲存工作步驟
+    best_step_sequence = {}  # 儲存工作步驟
 
     for gen in range(GENS):
         scores = [efficiency(ind, jobs, job_deadlines, machine_times, machine_capacity) for ind in population]
