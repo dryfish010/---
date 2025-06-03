@@ -5,7 +5,6 @@ import matplotlib
 import time
 import base64
 from io import BytesIO
-from ga import run_ga  # 確保你有 `ga.py` 模組
 import pandas as pd
 import seaborn as sns
 from datetime import datetime, timedelta
@@ -27,7 +26,7 @@ def process_jobs():
     data = request.get_json()
     
     job_inputs = data.get("jobs", {})
-    machine_times = data.get("machine_times", {})  # ✅ 確保接收 machine_times
+    machine_times = data.get("machine_times", {})  # 確保接收 machine_times
     machine_capacity=data.get("machine_capacity",{})
     #print(machine_capacity)
     #print(machine_times)
@@ -38,9 +37,8 @@ def process_jobs():
     jobs = {int(job_id): job_info["machines"] for job_id, job_info in job_inputs.items()}
     job_deadlines = {int(job_id): int(job_info["days"]) for job_id, job_info in job_inputs.items()}
 
-    #print("收到的 machine_times:", machine_times)  # ✅ 確保後端有接收機器時間
 
-    # 🔹 確保 `run_ga()` 接收 `machine_times`
+    # 確保 `run_ga()` 接收 `machine_times`
     result = run_ga(jobs, job_deadlines, machine_times,machine_capacity)
     return jsonify(result)
 
@@ -52,24 +50,25 @@ def extract_all_machines(jobs):
         machine_set.update(steps)
     return list(machine_set)
 
-
+# 生成初始族群
 def initialPop(machine_list, POP_SIZE):
-    """ 生成初始族群 """
+    #隨機排列組合
     return [random.sample(machine_list, len(machine_list)) for _ in range(POP_SIZE)]
 
 
 def efficiency(schedule, jobs, job_deadlines, machine_times, machine_capacity):
     #計算適應度：考慮步數、機器處理時間、遲交與機器最大承受數量 
+
     total_steps, total_late_penalty, total_time, machine_overload_penalty = 0, 0, 0, 0
     machine_usage = {m: 0 for m in machine_capacity}  # 記錄機器的負載
     
-    
     for job_id, machine_list in jobs.items():
+        #利用lambda 作為排序的函數
         sorted_steps = sorted(machine_list, key=lambda m: schedule.index(m))
         steps, completion_time = 0, 0
 
         for i in range(1, len(sorted_steps)):
-            
+            #取絕對值，避免負數
             steps += abs(schedule.index(sorted_steps[i]) - schedule.index(sorted_steps[i - 1]))
             completion_time += machine_times[sorted_steps[i]]
 
@@ -81,23 +80,23 @@ def efficiency(schedule, jobs, job_deadlines, machine_times, machine_capacity):
 
         # 超過可處理天數則加懲罰
         late_days = max(0, completion_time / 24 - job_deadlines[job_id])
-        total_late_penalty += late_days * 5  # 懲罰權重可調整
+        total_late_penalty += late_days * 10  # 懲罰權重可調整
 
     # 檢查機器是否過載
     for machine, usage in machine_usage.items():
         if usage > machine_capacity[machine]:  # 超過可處理數量
-            machine_overload_penalty += (usage - machine_capacity[machine]) * 10  # 懲罰可調整
+            machine_overload_penalty += (usage - machine_capacity[machine]) * 5  # 懲罰可調整
 
     # 目標：平衡步數、處理時間、遲交懲罰、機器負載
     return 1 / (1 + total_steps + total_time / 10 + total_late_penalty + machine_overload_penalty)
 
 def selectGA(population, jobs, job_deadlines,machine_times, machine_capacity):
-    """ 父代選擇（竟賽選擇） """
+    #父代選擇（竟賽選擇）
     return max(random.sample(population, 5), key=lambda ind: efficiency(ind, jobs, job_deadlines, machine_times, machine_capacity))
 
 
 def crossover(parent1, parent2):
-    """ 交叉操作 """
+    # 交叉
     size = len(parent1)
     p1, p2 = sorted(random.sample(range(size), 2))
 
@@ -113,7 +112,7 @@ def crossover(parent1, parent2):
 
 
 def mutate(offspring, MUTATION_RATE):
-    """ 突變操作 """
+    #突變
     if random.random() < MUTATION_RATE:
         i, j = sorted(random.sample(range(len(offspring)), 2))
         sub = offspring[i:j]
@@ -124,7 +123,7 @@ def mutate(offspring, MUTATION_RATE):
 
 
 def nextGA(parents, pop_size, jobs, MUTATION_RATE):
-    """ 產生子代 """
+    #產生子代
     offsprings = []
     while len(offsprings) < pop_size:
         p1, p2 = random.sample(parents, 2)
@@ -148,7 +147,7 @@ def GA(jobs, job_deadlines, POP_SIZE, GENS, MUTATION_RATE, machine_list, machine
             best_score = scores[best_idx]
             best_solution = population[best_idx]
 
-            # ✅ 記錄最佳解的工作步驟
+            #記錄最佳解的工作步驟
             for job_id, machines in jobs.items():
                 sorted_machines = sorted(machines, key=lambda m: best_solution.index(m))
                 best_step_sequence[job_id] = [
@@ -162,7 +161,33 @@ def GA(jobs, job_deadlines, POP_SIZE, GENS, MUTATION_RATE, machine_list, machine
 
     return 1 / best_score, best_solution, total_history, total_history.index(min(total_history)), best_step_sequence
 
-def generate_gantt_chart(job_steps, machine_capacity):
+def calculate_job_fitness(step_sequences, job_deadlines, machine_capacity):
+    job_fitness = {}
+
+    for job_id, steps in step_sequences.items():
+        completion_time = 0
+        machine_usage = {m: 0 for m in machine_capacity}
+        total_steps = len(steps)
+
+        for step in steps:
+            machine = step["machine"]
+            time = step["processing_time"]
+            completion_time += time
+            machine_usage[machine] += 1
+
+        late_days = max(0, completion_time / 24 - job_deadlines.get(job_id, 1))
+        overload_penalty = sum(
+            max(0, machine_usage[m] - machine_capacity[m]) * 5
+            for m in machine_usage
+        )
+
+        fitness = 1 / (1 + total_steps + completion_time / 10 + late_days * 10 + overload_penalty)
+        job_fitness[job_id] = fitness
+
+    return job_fitness
+
+
+def generate_gantt_chart(job_steps, machine_capacity,sorted_job_ids):
     """繪製甘特圖，考慮機器容量，避免同時安排超過容量的工作"""
     base_time = datetime(2025, 5, 1)
     machine_color_map = {}
@@ -175,7 +200,8 @@ def generate_gantt_chart(job_steps, machine_capacity):
     end_time=0
     job_time_range = {}
 
-    for job_id, job_info in job_steps.items():
+    for job_id in sorted_job_ids:
+        job_info = job_steps[job_id]
         start_time = base_time
         for step_index, step in enumerate(job_info["step_sequence"]):
             machine = step["machine"]
@@ -311,7 +337,17 @@ def run_ga(jobs, job_deadlines, machine_times, machine_capacity):
         for job_id in jobs.keys()
     }
 
-    gantt_chart,job_durations,end_time = generate_gantt_chart(job_steps, machine_capacity)
+    print(best_step_sequence)
+    # 原始 job_steps 是 dict，你需要加排序後的順序
+    job_fitness_scores = calculate_job_fitness(best_step_sequence, job_deadlines, machine_capacity)
+
+    # 按分數從高到低排序
+    sorted_job_ids = sorted(job_steps.keys(), key=lambda j: -job_fitness_scores[int(j)])
+
+    # 重新建立排序後的 job_steps
+    sorted_job_steps = {job_id: job_steps[job_id] for job_id in sorted_job_ids}
+
+    gantt_chart, job_durations, total_time = generate_gantt_chart(sorted_job_steps, machine_capacity,sorted_job_ids)
     print(job_durations)
 
     matplotlib.use('Agg') 
@@ -335,7 +371,7 @@ def run_ga(jobs, job_deadlines, machine_times, machine_capacity):
         "gantt_chart": gantt_chart,
         "job_steps": job_steps,
         "job_durations":job_durations,
-        "end_time":end_time
+        "end_time":total_time
     }
 
 
