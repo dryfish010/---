@@ -163,7 +163,7 @@ def GA(jobs, job_deadlines, POP_SIZE, GENS, MUTATION_RATE, machine_list, machine
 
 def calculate_job_fitness(step_sequences, job_deadlines, machine_capacity):
     job_fitness = {}
-
+    #跑每個工作的適應時間
     for job_id, steps in step_sequences.items():
         completion_time = 0
         machine_usage = {m: 0 for m in machine_capacity}
@@ -321,7 +321,7 @@ def run_ga(jobs, job_deadlines, machine_times, machine_capacity):
     start_time = time.time()
     POP_SIZE, GENS, MUTATION_RATE = 80, 20, round(random.random(), 3)
     machine_list = list(set(machine for job in jobs.values() for machine in job))
-
+    #找出最佳步數解
     best_steps, best_solution, fit_history, min_gens, best_step_sequence = GA(
         jobs, job_deadlines, POP_SIZE, GENS, MUTATION_RATE, machine_list, machine_times, machine_capacity
     )
@@ -337,8 +337,7 @@ def run_ga(jobs, job_deadlines, machine_times, machine_capacity):
         for job_id in jobs.keys()
     }
 
-    print(best_step_sequence)
-    # 原始 job_steps 是 dict，你需要加排序後的順序
+    #print(best_step_sequence)
     job_fitness_scores = calculate_job_fitness(best_step_sequence, job_deadlines, machine_capacity)
 
     # 按分數從高到低排序
@@ -346,9 +345,10 @@ def run_ga(jobs, job_deadlines, machine_times, machine_capacity):
 
     # 重新建立排序後的 job_steps
     sorted_job_steps = {job_id: job_steps[job_id] for job_id in sorted_job_ids}
-
+    
+    #繪製甘特圖
     gantt_chart, job_durations, total_time = generate_gantt_chart(sorted_job_steps, machine_capacity,sorted_job_ids)
-    print(job_durations)
+   
 
     matplotlib.use('Agg') 
     # 繪製收斂圖
